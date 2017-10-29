@@ -3,6 +3,8 @@ import argparse
 import pickle
 import gzip
 from collections import Counter, defaultdict
+import matplotlib.pyplot as plt
+
 
 import random
 import numpy
@@ -62,7 +64,40 @@ class Knearest:
         #
         # http://docs.scipy.org/doc/numpy/reference/generated/numpy.median.html
 
-        return self._y[item_indices[0]]
+        y_output = []
+        for i in range(len(item_indices)):
+            y_output.append(self._y[item_indices[i]])
+
+        output = list(dict(Counter(y_output)).items())
+        output.sort(key=lambda x: x[1], reverse = True)
+
+        '''
+        dictionary_of_y = dict()             # dict of {y:list of indices of _y}
+        for i in range(len(item_indices)):   # populating the dictionary using item_indices and _y
+            if self._y[item_indices[i]] not in dictionary_of_y:
+                dictionary_of_y[self._y[item_indices[i]]] = [item_indices[i]]
+            else:
+                dictionary_of_y[self._y[item_indices[i]]].append(item_indices[i])
+
+        list_output = list(dictionary_of_y.items())
+        list_output.sort(key=lambda x: len(x[1]), reverse=True)  # sorting in descending order with parameter length of list of indices (longer the list of indices of a _y, more is the frequency)
+    #    count = 1
+        '''
+        y_array = []    # array to find median, element of y_array has values of most frequent y(s)
+        for i in range(0,len(output)):  # checking and adding if there are two or more ys with same frequency as the most one
+            if(output[i][1] == output[0][1]):
+    #            count = count+1
+                y_array.append(output[i][0])
+
+
+        #label_x = y_array[0]
+        label_x = numpy.median(y_array)
+        return int(label_x)
+
+       # for i in range(len(item_indices)):
+       #     item_indices[i] = list_output[0][1][i]
+
+        # return self._y[item_indices[0]]
 
     def classify(self, example):
         """
@@ -75,8 +110,16 @@ class Knearest:
         # Finish this function to find the k closest points, query the
         # majority function, and return the value.
 
-        return self.majority(list(random.randrange(len(self._y)) \
-                                  for x in xrange(self._k)))
+
+    #    tree = BallTree(example, leaf_size=2)
+        distance, index = self._kdtree.query([example], self._k)
+
+
+        output_label =self.majority(index[0])
+
+        return output_label
+    #    return self.majority(list(random.randrange(len(self._y)) \
+    #                              for x in range(self._k)))
 
     def confusion_matrix(self, test_x, test_y, debug=False):
         """
@@ -97,6 +140,11 @@ class Knearest:
         data_index = 0
         for xx, yy in zip(test_x, test_y):
             data_index += 1
+            output_y = self.classify(xx)
+            if output_y in d[yy]:
+                d[yy][output_y] += 1
+            else:
+                d[yy][output_y] = 1
             if debug and data_index % 100 == 0:
                 print("%i/%i for confusion matrix" % (data_index, len(test_x)))
         return d
@@ -132,6 +180,10 @@ if __name__ == "__main__":
     data = Numbers("../data/mnist.pkl.gz")
 
     # You should not have to modify any of this code
+#    limit_array = [500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]
+#    accuracy_array = []
+
+#    for limit in limit_array:
 
     if args.limit > 0:
         print("Data limit: %i" % args.limit)
@@ -142,10 +194,17 @@ if __name__ == "__main__":
     print("Done loading data")
 
     confusion = knn.confusion_matrix(data.test_x, data.test_y)
-    print("\t" + "\t".join(str(x) for x in xrange(10)))
+    print("\t" + "\t".join(str(x) for x in range(10)))
     print("".join(["-"] * 90))
-    for ii in xrange(10):
+    for ii in range(10):
         print("%i:\t" % ii + "\t".join(str(confusion[ii].get(x, 0))
-                                       for x in xrange(10)))
-    print("Accuracy: %f" % knn.accuracy(confusion))
-
+                                       for x in range(10)))
+    accuracy = knn.accuracy(confusion)
+    print("Accuracy: %f" % accuracy)
+#    accuracy_array.append(accuracy*100)
+#    print(accuracy_array)
+#    plt.plot(limit_array, accuracy_array, "ro")
+#    plt.suptitle("Limit vs Accuracy Plot")
+#    plt.xlabel("Limits")
+#    plt.ylabel("Accuracy")
+#    plt.show()
